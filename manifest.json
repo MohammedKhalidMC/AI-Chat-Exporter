@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "AI Chat Export - Inline Toolbar",
+  "version": "3.0",
+  "description": "Injects export buttons (PDF, DOCX, MD) directly into Gemini, ChatGPT, and Kimi chat bubbles.",
+  "permissions": ["activeTab", "scripting"],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://chatgpt.com/*",
+        "*://gemini.google.com/*",
+        "*://kimi.moonshot.cn/*"
+      ],
+      "js": ["turndown.js", "html-docx.js", "content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

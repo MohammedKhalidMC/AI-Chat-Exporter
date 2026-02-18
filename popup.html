@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { width: 250px; padding: 15px; font-family: system-ui, -apple-system, sans-serif; background: #f9fafb; }
+    h2 { margin-top: 0; font-size: 16px; color: #111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
+    button {
+      display: block; width: 100%; padding: 10px; margin-bottom: 8px;
+      border: 1px solid #d1d5db; border-radius: 6px; background: white;
+      cursor: pointer; font-weight: 500; text-align: left; transition: all 0.2s;
+      color: #374151;
+    }
+    button:hover { background: #f3f4f6; border-color: #9ca3af; }
+    button:active { background: #e5e7eb; }
+    
+    .btn-primary { background: #2563eb; color: white; border: none; }
+    .btn-primary:hover { background: #1d4ed8; }
+    
+    #status { font-size: 12px; color: #6b7280; margin-top: 10px; min-height: 20px; }
+    .error { color: #dc2626; }
+    .success { color: #059669; }
+  </style>
+</head>
+<body>
+  <h2>Chat Exporter</h2>
+  
+  <button id="exportMD">📄 Export to Markdown</button>
+  <button id="exportDOCX">📝 Export to DOCX</button>
+  <button id="exportPDF" class="btn-primary">🖨️ Export to PDF</button>
+  
+  <div id="status">Ready</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
