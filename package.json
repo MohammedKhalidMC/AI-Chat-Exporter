@@ -1,0 +1,32 @@
+{
+  "name": "ai-chat-exporter",
+  "version": "1.0.0",
+  "description": "A chrome extension that injects export buttons (PDF, DOCX, MD) directly into Gemini, ChatGPT, and Kimi chat bubbles.",
+  "main": "content.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MohammedKhalidMC/AI-Chat-Exporter.git"
+  },
+  "author": "Mohamed",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MohammedKhalidMC/AI-Chat-Exporter/issues"
+  },
+  "homepage": "https://github.com/MohammedKhalidMC/AI-Chat-Exporter#readme",
+  "dependencies": {
+    "html-docx-js-typescript": "^0.1.5",
+    "html-to-pdfmake": "^2.5.32",
+    "html2pdf.js": "^0.14.0",
+    "pdfmake": "^0.3.4",
+    "turndown": "^7.2.2"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.33",
+    "vite": "^7.3.1"
+  }
+}

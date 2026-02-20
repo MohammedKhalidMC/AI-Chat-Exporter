@@ -1,3 +1,20 @@
+import './styles.css';
+import TurndownService from 'turndown';
+import { asBlob } from 'html-docx-js-typescript';
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+import htmlToPdfmake from "html-to-pdfmake";
+
+// CRITICAL VITE FIX: 
+// Safely locate the 'vfs' object regardless of how Vite packages the UMD module
+const vfs = pdfFonts?.pdfMake?.vfs || pdfFonts?.default?.pdfMake?.vfs || window?.pdfMake?.vfs;
+
+if (vfs) {
+    pdfMake.vfs = vfs;
+} else {
+    console.error("PDFMake fonts failed to load.");
+}
+
 // --- ICONS (SVG Strings) ---
 const ICONS = {
     pdf: '<svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>',
@@ -53,45 +70,124 @@ function downloadFile(filename, content, mimeType) {
     URL.revokeObjectURL(url);
 }
 
-function exportToPDF(element, filename) {
-    // We clone the node to print just this message
+async function exportToPDF(element, filename) {
+    // A complex process to export the PDF using pdfMake
     const clone = element.cloneNode(true);
     
-    // Create an iframe to print
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-    
-    // Basic styles for the print view
-    const css = `
-        <style>
-            body { font-family: sans-serif; padding: 20px; line-height: 1.6; color: #333; }
-            img { max-width: 100%; }
-            pre { background: #f4f4f4; padding: 10px; border-radius: 5px; white-space: pre-wrap; }
-            code { font-family: monospace; background: #eee; padding: 2px 4px; border-radius: 3px; }
-            table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .ai-export-toolbar, 
-            .source-container, 
-            button, 
-            [role="button"] { 
-                display: none !important; 
+    // 1. Clean up elements we don't want in the PDF
+    clone.querySelectorAll('.ai-export-toolbar, svg, button, iframe, script, img').forEach(el => el.remove());
+
+    // 2. Preserve Syntax Highlighting Colors
+    const originalSpans = element.querySelectorAll('pre code span');
+    const cloneSpans = clone.querySelectorAll('pre code span');
+    if (originalSpans.length === cloneSpans.length) {
+        for (let i = 0; i < originalSpans.length; i++) {
+            const computed = window.getComputedStyle(originalSpans[i]);
+            cloneSpans[i].style.color = computed.color;
+        }
+    }
+
+    // 3. REVERT INLINE CODE: Back to light mode
+    clone.querySelectorAll('code').forEach(code => {
+        if (code.closest('pre')) {
+            code.style.backgroundColor = 'transparent';
+        } else {
+            code.style.backgroundColor = '#f4f4f4'; 
+            code.style.color = '#333333'; 
+            code.style.padding = '2px 4px';
+            code.style.borderRadius = '3px';
+            code.style.border = '1px solid #e0e0e0';
+            code.style.fontSize = '10pt';
+        }
+    });
+
+    // 4. DARK MODE BLOCK CODE & PRESERVE INDENTATION
+    clone.querySelectorAll('pre').forEach(pre => {
+        const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT, null, false);
+        const textNodes = [];
+        let node;
+        while (node = walker.nextNode()) textNodes.push(node);
+        
+        textNodes.forEach(textNode => {
+            textNode.nodeValue = textNode.nodeValue
+                .replace(/\n( +)/g, (match, p1) => '\n' + '\u00A0'.repeat(p1.length))
+                .replace(/^( +)/, (match, p1) => '\u00A0'.repeat(p1.length));
+        });
+
+        const table = document.createElement('table');
+        table.setAttribute('width', '100%'); 
+        const tbody = document.createElement('tbody');
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        
+        td.style.backgroundColor = '#1E1E1E'; 
+        td.style.padding = '10px'; 
+        
+        const cleanCode = document.createElement('div');
+        cleanCode.style.color = '#D4D4D4'; 
+        cleanCode.innerHTML = pre.innerHTML.replace(/\n/g, '<br>');
+        
+        cleanCode.querySelectorAll('*').forEach(el => {
+            el.style.backgroundColor = 'transparent';
+        });
+        
+        td.appendChild(cleanCode);
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        table.appendChild(tbody);
+        
+        pre.parentNode.replaceChild(table, pre);
+    });
+
+    const htmlString = clone.innerHTML;
+
+    try {
+        const pdfMakeContent = htmlToPdfmake(htmlString, {
+            tableAutoSize: true, 
+            defaultStyles: {
+                table: { margin: [0, 10, 0, 15] },
+                th: { fillColor: '#e9ecef', bold: true },
+                h1: { fontSize: 18, bold: true, margin: [0, 15, 0, 5] },
+                h2: { fontSize: 16, bold: true, margin: [0, 15, 0, 5] },
+                h3: { fontSize: 14, bold: true, margin: [0, 10, 0, 5] },
+                p: { margin: [0, 0, 0, 10] },
+                ul: { margin: [0, 0, 0, 10] },
+                ol: { margin: [0, 0, 0, 10] }
             }
-        </style>
-    `;
+        });
 
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`<html><head><title>${filename}</title>${css}</head><body>${clone.innerHTML}</body></html>`);
-    doc.close();
+        const preserveSpaces = (obj) => {
+            if (Array.isArray(obj)) {
+                obj.forEach(preserveSpaces);
+            } else if (obj && typeof obj === 'object') {
+                obj.preserveLeadingSpaces = true;
+                for (let key in obj) {
+                    if (typeof obj[key] === 'object') {
+                        preserveSpaces(obj[key]);
+                    }
+                }
+            }
+        };
+        preserveSpaces(pdfMakeContent);
 
-    // Wait for images/resources then print
-    setTimeout(() => {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        setTimeout(() => document.body.removeChild(iframe), 2000);
-    }, 500);
+        const docDefinition = {
+            content: pdfMakeContent,
+            defaultStyle: {
+                font: 'Roboto',
+                fontSize: 11,
+                color: '#333333',
+                lineHeight: 1.2,
+                preserveLeadingSpaces: true
+            },
+            pageMargins: [ 40, 40, 40, 40 ]
+        };
+
+        pdfMake.createPdf(docDefinition).download(filename + '.pdf');
+
+    } catch (error) {
+        console.error("PDF Export Failed:", error);
+        alert("PDF Export failed: " + error.message);
+    }
 }
 
 async function exportToDOCX(element, filename) {
@@ -186,14 +282,9 @@ async function exportToDOCX(element, filename) {
             </body>
         </html>
     `;
-    
-    if (!window.htmlDocx) {
-        alert("Error: 'html-docx.js' library not found.");
-        return;
-    }
 
     try {
-        const docxBlob = window.htmlDocx.asBlob(fullHtml);
+        const docxBlob = await asBlob(fullHtml);
         downloadFile(filename + '.docx', docxBlob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     } catch (error) {
         console.error("Word Export Failed:", error);

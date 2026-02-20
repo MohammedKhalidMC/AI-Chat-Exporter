@@ -21,10 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus('Injecting script...');
       
       // Inject the content script
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content.js']
-      });
+      // await chrome.scripting.executeScript({
+      //   target: { tabId: tab.id },
+      //   files: ['content.js']
+      // });
 
       setStatus(`Exporting to ${format}...`);
       
