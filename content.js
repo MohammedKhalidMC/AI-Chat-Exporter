@@ -58,12 +58,12 @@ function getPlatform() {
 
 // --- EXPORT FUNCTIONS ---
 
-function downloadFile(filename, content, mimeType) {
+function downloadFile(filename, filenameExt, content, mimeType) {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = filename + filenameExt;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -285,7 +285,7 @@ async function exportToDOCX(element, filename) {
 
     try {
         const docxBlob = await asBlob(fullHtml);
-        downloadFile(filename + '.docx', docxBlob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        downloadFile(filename, '.docx', docxBlob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     } catch (error) {
         console.error("Word Export Failed:", error);
         alert("Export failed: " + error.message);
@@ -299,7 +299,7 @@ function exportToMarkdown(element, filename) {
     if (toolbar) toolbar.remove();
     const turndownService = new TurndownService();
     let md = turndownService.turndown(clone.innerHTML);
-    downloadFile(filename + '.md', md, 'text/markdown');
+    downloadFile(filename, '.md', md, 'text/markdown');
 }
 
 // --- MAIN INJECTION LOGIC ---
@@ -345,19 +345,29 @@ function injectToolbars() {
         // Timestamp for unique filenames
         const getFilename = () => `AI-Chat-${new Date().getTime()}`;
 
+        // Prompt for filename
+        const askFilename = () => {
+            const defaultName = "AI-Chat";
+            const name = window.prompt("Enter filename:", defaultName);
+            return name ? name : null;
+        };
+
         // PDF Button
         toolbar.appendChild(createButton('PDF', ICONS.pdf, () => {
-            exportToPDF(contentNode, getFilename());
+            const fname = askFilename();
+            if (fname) exportToPDF(contentNode, fname);
         }));
 
         // DOCX Button
         toolbar.appendChild(createButton('Word', ICONS.word, () => {
-            exportToDOCX(contentNode, getFilename());
+            const fname = askFilename();
+            if (fname) exportToDOCX(contentNode, fname);
         }));
         
         // MD Button
         toolbar.appendChild(createButton('MD', ICONS.md, () => {
-            exportToMarkdown(contentNode, getFilename());
+            const fname = askFilename();
+            if (fname) exportToMarkdown(contentNode, fname);
         }));
 
         // Append to UI
